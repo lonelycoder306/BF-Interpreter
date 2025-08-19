@@ -38,11 +38,9 @@ void computeCode(std::ifstream& fileCin, unsigned char *array)
 				break;
 			case ',':
 				//Input 1.
-				if (!firstIO)
-					std::cout << std::endl << std::flush;
+				if (!firstIO) std::cout << std::endl << std::flush;
 				array[ptr] = std::cin.get();
-				if (array[ptr] == '\n')
-					array[ptr] = std::cin.get();
+				if (array[ptr] == '\n') array[ptr] = std::cin.get();
 				firstIO = false;
 				break;
 			case '[':
@@ -51,10 +49,8 @@ void computeCode(std::ifstream& fileCin, unsigned char *array)
 					loopLevel = 1; // In case of nested loop.
 					while (loopLevel > 0 && ++i < code.size())
 					{
-						if (code[i] == '[')
-							loopLevel++;
-						else if (code[i] == ']')
-							loopLevel--;
+						if (code[i] == '[') loopLevel++;
+						else if (code[i] == ']') loopLevel--;
 					}
 					if (i == code.size() and loopLevel != 0)
 					{
@@ -69,10 +65,8 @@ void computeCode(std::ifstream& fileCin, unsigned char *array)
 					loopLevel = 1;
 					while (loopLevel > 0 && --i >= 0)
 					{
-						if (code[i] == ']')
-							loopLevel++;
-						else if (code[i] == '[')
-							loopLevel--;
+						if (code[i] == ']') loopLevel++;
+						else if (code[i] == '[') loopLevel--;
 					}
 					if (i < 0 and loopLevel != 0)
 					{
@@ -81,8 +75,6 @@ void computeCode(std::ifstream& fileCin, unsigned char *array)
 					}
 				}
 				break;
-			default:
-				continue;
 		}
 	}
 }
@@ -100,10 +92,7 @@ int main(int argc, char* argv[])
 		}
 
 		unsigned char* array = new unsigned char[30000];
-		for (int i = 0; i < 30000; i++)
-		{
-			array[i] = 0;
-		}
+		for (int i = 0; i < 30000; i++) array[i] = 0;
 
 		computeCode(fileCin, array);
 
@@ -111,4 +100,6 @@ int main(int argc, char* argv[])
 
 		fileCin.close();
 	}
+
+	return 0;
 }
