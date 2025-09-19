@@ -29,6 +29,7 @@ char* readFile(const char* path)
     if (bytesRead < fileSize)
     {
         fprintf(stderr, "Could not read file \"%s\".\n", path);
+        exit(74);
     }
 
     buffer[bytesRead] = '\0';
@@ -130,4 +131,5 @@ int main(int argc, char** argv)
 	}
 
 	return 0;
+
 }
