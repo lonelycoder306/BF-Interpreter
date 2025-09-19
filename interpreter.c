@@ -4,8 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+unsigned char* array;
+char* code;
+int ptr;
+
 // readFile adapted from "Crafting Interpreters" clox.
-char* readFile(const char* path)
+static char* readFile(const char* path)
 {
     FILE* file = fopen(path, "rb");
     if (file == NULL)
@@ -38,10 +42,61 @@ char* readFile(const char* path)
     return buffer;
 }
 
-void computeCode(const char* path, unsigned char* array)
+static bool readIn(unsigned char* array, int ptr, bool firstIO)
 {
-    char* code = readFile(path);
-	int ptr = 0;
+    if (!firstIO)
+    {
+        printf("\n");
+        // Flush the buffer.
+        char buffer[1024];
+        fgets(buffer, sizeof(buffer), stdin);
+    }
+    array[ptr] = (unsigned char) getchar();
+    if (array[ptr] == '\n') array[ptr] = (unsigned char) getchar();
+    firstIO = false;
+    return firstIO;
+}
+
+static void loopOpen(int* pos, int size, int* loopLevel)
+{
+    if (array[ptr] == 0)
+    {
+        *loopLevel = 1; // In case of nested loop.
+        while (*loopLevel > 0 && ++(*pos) < size)
+        {
+            if (code[*pos] == '[') (*loopLevel)++;
+            else if (code[*pos] == ']') (*loopLevel)--;
+        }
+        if (*pos == size && *loopLevel != 0)
+        {
+            fprintf(stderr, "No matching ']' for loop.");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+static void loopClose(int* pos, int size, int* loopLevel)
+{
+    if (array[ptr] != 0)
+    {
+        *loopLevel = 1;
+        while (*loopLevel > 0 && --(*pos) >= 0)
+        {
+            if (code[*pos] == ']') (*loopLevel)++;
+            else if (code[*pos] == '[') (*loopLevel)--;
+        }
+        if (*pos < 0 && *loopLevel != 0)
+        {
+            fprintf(stderr, "No matching '[' for loop.");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+static void computeCode(const char* path, unsigned char* array)
+{
+    code = readFile(path);
+	ptr = 0;
 	bool firstIO = true;
 	int size = (int) strlen(code);
 
@@ -51,22 +106,23 @@ void computeCode(const char* path, unsigned char* array)
 		switch (code[i])
 		{
 			case '>':
-				//Forward 1.
-				ptr++;
-				break;
+                // Forward 1.
+                if (++ptr >= 30000)
+                {
+                    fprintf(stderr, "Pointer overflow.");
+                    exit(EXIT_FAILURE);
+                }
+                break;
 			case '<':
-				//Back 1.
-				ptr--;
-				break;
-			case '+':
-				//Add 1.
-				array[ptr]++;
-				break;
-			case '-':
-				//Minus 1.
-				if (array[ptr] != 0) // Limit checking.
-					array[ptr]--;
-				break;
+                // Back 1.
+                if (--ptr < 0)
+                {
+                    fprintf(stderr, "Pointer overflow.");
+                    exit(EXIT_FAILURE);
+                }
+                break;
+			case '+': array[ptr]++; break; // Add 1.
+			case '-': array[ptr]--; break; // Minus 1.
 			case '.':
 				//Print 1.
 				printf("%c", array[ptr]);
@@ -74,62 +130,28 @@ void computeCode(const char* path, unsigned char* array)
 				break;
 			case ',':
 				//Input 1.
-				if (!firstIO)
-				{
-					printf("\n");
-					// Flush the buffer.
-					char buffer[1024];
-					fgets(buffer, sizeof(buffer), stdin);
-				}
-				array[ptr] = (unsigned char) getchar();
-				if (array[ptr] == '\n') array[ptr] = (unsigned char) getchar();
-				firstIO = false;
+				firstIO = readIn(array, ptr, firstIO);
 				break;
 			case '[':
-				if (array[ptr] == 0)
-				{
-					loopLevel = 1; // In case of nested loop.
-					while (loopLevel > 0 && ++i < size)
-					{
-						if (code[i] == '[') loopLevel++;
-						else if (code[i] == ']') loopLevel--;
-					}
-					if (i == size && loopLevel != 0)
-					{
-						perror("No matching ']' for loop.");
-						exit(-1);
-					}
-				}
+                loopOpen(&i, size, &loopLevel);
 				break;
 			case ']':
-				if (array[ptr] != 0)
-				{
-					loopLevel = 1;
-					while (loopLevel > 0 && --i >= 0)
-					{
-						if (code[i] == ']') loopLevel++;
-						else if (code[i] == '[') loopLevel--;
-					}
-					if (i < 0 && loopLevel != 0)
-					{
-						perror("No matching '[' for loop.");
-						exit(-1);
-					}
-				}
+				loopClose(&i, size, &loopLevel);
 				break;
 		}
 	}
+
+    free(code);
 }
 
 int main(int argc, char** argv)
 {
 	if (argc == 2)
 	{
-		unsigned char* array = calloc(30000, sizeof(unsigned char));
+		array = calloc(30000, sizeof(unsigned char));
 		computeCode(argv[1], array);
 		free(array);
 	}
 
 	return 0;
-
 }
